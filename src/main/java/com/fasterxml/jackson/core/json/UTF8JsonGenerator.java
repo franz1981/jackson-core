@@ -1437,10 +1437,17 @@ public class UTF8JsonGenerator
         final byte[] outputBuffer = _outputBuffer;
         final int[] escCodes = _outputEscapes;
 
+        // For the standard escape table the check is expressible with constants: the JIT
+        // unswitches the loop on this flag, and the resulting copy loop has no per-character
+        // table load. That load is what makes the loop spill its registers when this method
+        // is inlined into a caller.
+        final boolean stdEsc = (escCodes == CharTypes.get7BitOutputEscapes());
+
         while (offset < len) {
             int ch = cbuf[offset];
             // note: here we know that (ch > 0x7F) will cover case of escaping non-ASCII too:
-            if (ch > 0x7F || escCodes[ch] != 0) {
+            if (stdEsc ? (ch < 0x20 || ch > 0x7F || ch == '"' || ch == '\\')
+                    : (ch > 0x7F || escCodes[ch] != 0)) {
                 break;
             }
             outputBuffer[outputPtr++] = (byte) ch;
@@ -1469,10 +1476,17 @@ public class UTF8JsonGenerator
         final byte[] outputBuffer = _outputBuffer;
         final int[] escCodes = _outputEscapes;
 
+        // For the standard escape table the check is expressible with constants: the JIT
+        // unswitches the loop on this flag, and the resulting copy loop has no per-character
+        // table load. That load is what makes the loop spill its registers when this method
+        // is inlined into a caller.
+        final boolean stdEsc = (escCodes == CharTypes.get7BitOutputEscapes());
+
         while (offset < len) {
             int ch = text.charAt(offset);
             // note: here we know that (ch > 0x7F) will cover case of escaping non-ASCII too:
-            if (ch > 0x7F || escCodes[ch] != 0) {
+            if (stdEsc ? (ch < 0x20 || ch > 0x7F || ch == '"' || ch == '\\')
+                    : (ch > 0x7F || escCodes[ch] != 0)) {
                 break;
             }
             outputBuffer[outputPtr++] = (byte) ch;
